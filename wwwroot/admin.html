@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <script type="module">
+        const response = await fetch("api/canadmin", {
+            method: "GET"
+        });
+
+        if (response.status == 200) {
+            const json = await response.json();
+            const b = document.getElementById("signOutButton");
+            document.getElementById("signOutButton").innerText = "Sign out (" + json.name + ")";
+            document.getElementById("welcomeH4").innerText = "Welcome back, " + json.name + "!";
+        }
+        else
+            window.location.href = "/sign-in.html";
+    </script>
+
+    <title>Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="#" crossorigin="anonymous">
+
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-md-7">
+            <nav class="navbar navbar-default" role="navigation">
+                <button id="signOutButton" class="btn btn-sm btn-primary">Sign out</button>
+            </nav>
+
+		    <div class="card">
+		        <div class="card-body">
+		            <div class="row">
+		                <div class="col-md-3 border-right">
+		                    <h4 id="welcomeH4"></h4>
+		                </div>
+                        <div class="col-md-4">
+                            <button id="blockUsersButton" class="btn btn-sm btn-primary"><i class="fa fa-lock"></i> Block</button>
+                            <button id="unblockUsersButton" class="btn btn-sm btn-primary"><i class="fa fa-unlock"></i></button>
+                            <button id="removeUsersButton" class="btn btn-sm btn-primary"><i class="fa fa-trash"></i></button>
+                            <button id="cleanUsersButton" class="btn btn-sm btn-primary"><i class="fa fa-user-times" aria-hidden="true"></i></button>
+                        </div>
+
+                        <script type="module">
+							import { blockUsersButtonOnClick, unblockUsersButtonOnClick } from "/js/admin.js";
+
+							document.getElementById("blockUsersButton").addEventListener("click", blockUsersButtonOnClick);
+							document.getElementById("unblockUsersButton").addEventListener("click", unblockUsersButtonOnClick);
+                        </script>
+		                
+		            </div>
+		            <div class="row">
+		                <div class="col-md-12">
+		                    <table id="usersTable" class="table table-hover">
+                                <thead class="bg-light ">
+                                    <tr>
+                                        <th>
+                                            <div class="form-check-inline">
+                                                <label class="form-check-label">
+                                                    <input id="allUsersCheckbox" type="checkbox" class="form-check-input" value="">
+
+                                                    <script type="module">
+                                                        import { allUsersCheckboxOnClick } from "/js/admin.js";
+
+                                                        document.getElementById("allUsersCheckbox").addEventListener("click", allUsersCheckboxOnClick);
+                                                    </script>
+                                                </label>
+                                            </div>
+                                        </th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th>Last sign in</th>
+                                    </tr>
+                                </thead>
+
+                              </table>
+
+                            <script type="module">
+			                    import { resetUsersTable } from "/js/admin.js";
+
+                                await resetUsersTable();
+                            </script>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		</div>
+	</div>
+</div>
+</body>
+</html>
