@@ -2,6 +2,7 @@
 
 namespace TaskFour.Api
 {
+	[ApiRequest("POST")]
 	public class SignUp : IApiRequest
 	{
 		public class Request
@@ -12,33 +13,51 @@ namespace TaskFour.Api
 			public string RepeatPassword {  get; set; } = null!;
 		}
 
-		[ApiRequestMethod("POST")]
-		public async Task RespondAsync(HttpContext httpContext)
+		public async Task<(int?, object?)> RespondAsync(HttpContext httpContext)
 		{
 			Request? request = await httpContext.Request.ReadFromJsonAsync<Request>();
 			string? response = request is null || string.IsNullOrEmpty(request.Name) || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password) 
 				|| string.IsNullOrEmpty(request.RepeatPassword) ? "Name, email and both passwords password cannot be empty" : request.Password != request.RepeatPassword ? "Passwords are not equal" : null;
-
+			/*
 			Db.User? user = request is null ? null : Task4Context.Instance.Users.FirstOrDefault((Db.User user) => user.Email == request.Email);
 			response ??= user is null ? null : $"User {user.Email} already exists";
+			*/
 			if (response is not null || request is null)
 			{
-				httpContext.Response.StatusCode = 400;
-				await httpContext.Response.WriteAsJsonAsync(response);
-				return;
+				return (400, response);
 			}
 
-			user = new() { Name = request.Name, Email = request.Email, Password = request.Password };
-			Task4Context.Instance.Users.Add(user);
-			Task4Context.Instance.SaveChanges();
+			Db.VerifyGuid? verifyGuid = null;
+			string? strGuid;
+			Db.User user = new() { Name = request.Name, Email = request.Email, Password = request.Password };
 
-			Db.VerifyGuid verifyGuid = new() { UserId = user.Id, Guid = Guid.NewGuid().ToString() };
-			Task4Context.Instance.VerifyGuids.Add(verifyGuid);
-			Task4Context.Instance.SaveChanges();
 
-			httpContext.Response.StatusCode = 200;
-			await httpContext.Response.WriteAsJsonAsync($"/api/verify?userId={user.Id}&guid={verifyGuid.Guid}");
-			return;
+			using var transaction = Task4Context.Instance.Database.BeginTransaction();
+			try
+			{
+				Task4Context.Instance.Users.Add(user);
+				Task4Context.Instance.SaveChanges();
+
+				strGuid = Guid.NewGuid().ToString();
+				verifyGuid = new() { UserId = user.Id, Guid = strGuid };
+				Task4Context.Instance.VerifyGuids.Add(verifyGuid);
+				Task4Context.Instance.SaveChanges();
+
+				transaction.Commit();
+			}
+			catch
+			{
+				strGuid = null;
+				Task4Context.Instance.Users.Remove(user);
+				if (verifyGuid is not null)
+					Task4Context.Instance.VerifyGuids.Remove(verifyGuid);
+
+				transaction.Rollback();
+				throw;
+			}
+
+			response = $"/api/verify?userId={user.Id}&guid={strGuid}";
+			return (200, response);
 		}
 	}
 }

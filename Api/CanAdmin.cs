@@ -2,8 +2,11 @@
 
 namespace TaskFour.Api
 {
-	public class CanAdmin : IApiRequest
+	[ApiRequest("GET")]
+	public class CanAdmin : AdminApiRequest, IApiRequest
 	{
+		protected override Task<(int?, object?)> GetStatusCode(HttpContext context) => throw new NotImplementedException();
+
 		public class Response
 		{
 			public int Id { get; set; }
@@ -11,20 +14,15 @@ namespace TaskFour.Api
 			public string Email { get; set; } = null!;
 		}
 
-		[ApiRequestMethod("GET")]
-		public async Task RespondAsync(HttpContext httpContext)
+		public override async Task<(int?, object?)> RespondAsync(HttpContext httpContext)
 		{
-			if (httpContext.Session.GetInt32("userId") is int userId && Task4Context.Instance.Users.Find(userId) is Db.User user && user.Status == 1)
+			if (this.CanAdmin(httpContext.Session, out Db.User? user) && user is not null)
 			{
-				httpContext.Response.StatusCode = 200;
-
 				Response response = new() { Id = user.Id, Name = user.Name, Email = user.Email };
-				await httpContext.Response.WriteAsJsonAsync(response);
+				return (200, response);
 			}
-			else
-				httpContext.Response.StatusCode = 401;
 
-			return;
+			return (401, null);
 		}
 	}
 }

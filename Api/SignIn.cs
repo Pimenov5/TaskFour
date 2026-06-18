@@ -2,6 +2,7 @@
 
 namespace TaskFour.Api
 {
+	[ApiRequest("POST")]
 	public class SignIn : IApiRequest
 	{
 		public class Request
@@ -10,21 +11,18 @@ namespace TaskFour.Api
 			public string Password { get; set; } = string.Empty;
 		}
 
-		[ApiRequestMethod("POST")]
-		public async Task RespondAsync(HttpContext httpContext)
+		public async Task<(int?, object?)> RespondAsync(HttpContext httpContext)
 		{
 			Request? request = await httpContext.Request.ReadFromJsonAsync<Request>();
 			if (request is null || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
 			{
-				httpContext.Response.StatusCode = 400;
-				await httpContext.Response.WriteAsJsonAsync<string>("Email and password cannot be empty");
-				return;
+				return (400, "Email and password cannot be empty");
 			}
 
 			Db.User? user = Task4Context.Instance.Users.FirstOrDefault((Db.User user) => user.Email == request.Email && user.Password == request.Password);
 			string? response = user is null ? "User not found" : user.Status switch
 			{
-				0 => "Not verified user cannot sign in",
+				0 => null, // "Not verified user cannot sign in",
 				1 => null,
 				2 => "Blocked user cannot sign in",
 				_ => throw new("User Status unknown value: " + user.Status.ToString())
@@ -32,9 +30,23 @@ namespace TaskFour.Api
 
 			if (response is not null || user is null)
 			{
-				httpContext.Response.StatusCode = 401;
-				await httpContext.Response.WriteAsJsonAsync(response);
-				return;
+				return (401, response);
+			}
+
+			Db.SignInTimestamp timestamp = new() { UserId = user.Id, Timestamp = DateTime.UtcNow.ToOADate() };
+
+			using var transaction = Task4Context.Instance.Database.BeginTransaction();
+			try
+			{
+				Task4Context.Instance.SignInTimestamps.Add(timestamp);
+				Task4Context.Instance.SaveChanges();
+
+				transaction.Commit();
+			}
+			catch
+			{
+				transaction.Rollback();
+				throw;
 			}
 
 			httpContext.Session.SetInt32("userId", user.Id);
@@ -44,11 +56,7 @@ namespace TaskFour.Api
 
 			httpContext.Response.Redirect($"/admin.html");
 
-			Db.SignInTimestamp timestamp = new() { UserId = user.Id, Timestamp = DateTime.UtcNow.ToOADate() };
-			Task4Context.Instance.SignInTimestamps.Add(timestamp);
-			Task4Context.Instance.SaveChanges();
-
-			return;
+			return (null, null);
 		}
 	}
 }

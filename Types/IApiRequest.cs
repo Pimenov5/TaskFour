@@ -2,6 +2,6 @@
 {
 	public interface IApiRequest
 	{
-		public Task RespondAsync(HttpContext httpContext);
+		public Task<(int?, object?)> RespondAsync(HttpContext httpContext);
 	}
 }

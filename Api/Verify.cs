@@ -1,11 +1,12 @@
-﻿using TaskFour.Types;
+﻿using Microsoft.EntityFrameworkCore;
+using TaskFour.Types;
 
 namespace TaskFour.Api
 {
+	[ApiRequest("GET")]
 	public class Verify : IApiRequest
 	{
-		[ApiRequestMethod("GET")]
-		public async Task RespondAsync(HttpContext httpContext)
+		public async Task<(int?, object?)> RespondAsync(HttpContext httpContext)
 		{
 			int userId = 0;
 			const string EMPTY_PARAMS = "Parameters userId and guid cannot be empty";
@@ -22,16 +23,24 @@ namespace TaskFour.Api
 				? CANNOT_VERIFY : null;
 			if (response is not null)
 			{
-				httpContext.Response.StatusCode = 400;
-				await httpContext.Response.WriteAsJsonAsync(response);
-				return;
+				return (400, response);
 			}
 
-			(Task4Context.Instance.Users.Find(userId) ?? throw new NullReferenceException()).Status = 1;
-			Task4Context.Instance.SaveChanges();
+			using var transaction = Task4Context.Instance.Database.BeginTransaction();
+			try
+			{
+				Task4Context.Instance.Users.Find(userId)?.Status = 1;
+				Task4Context.Instance.SaveChanges();
+				transaction.Commit();
+			}
+			catch
+			{
+				transaction.Rollback();
+				throw;
+			}
 
 			httpContext.Response.Redirect("/sign-in.html");
-			return;
+			return (null, null);
 		}
 	}
 }

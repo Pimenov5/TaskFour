@@ -1,8 +1,10 @@
-﻿using TaskFour.Types;
+﻿using Microsoft.EntityFrameworkCore;
+using TaskFour.Types;
 
 namespace TaskFour.Api
 {
-	public class SetUsersStatus : IApiRequest
+	[ApiRequest("PATCH")]
+	public class SetUsersStatus : AdminApiRequest, IApiRequest
 	{
 		public class Request
 		{
@@ -10,29 +12,33 @@ namespace TaskFour.Api
 			public int[] Ids { get; set; } = null!;
 		}
 
-		[ApiRequestMethod("PATCH")]
-		public virtual async Task RespondAsync(HttpContext httpContext)
+		protected override async Task<(int?, object?)> GetStatusCode(HttpContext httpContext)
 		{
-			string? response = httpContext.Session.GetInt32("userId") is not int userId || Task4Context.Instance.Users.Find(userId) is not Db.User user || user.Status != 1
-				? $"Only active users can set other users status" : null;
-
 			Request? request = await httpContext.Request.ReadFromJsonAsync<Request>();
-			response ??= request is null || request.Ids.Length == 0 ? $"Not enough users' id to set status" : null;
-			if (response is not null)
+			string? response = request is null || request.Ids.Length == 0 ? $"Not enough users' ID to set status" : null;
+			if (response is not null || request is null)
 			{
-				httpContext.Response.StatusCode = 400;
-				await httpContext.Response.WriteAsJsonAsync(response);
-				return;
+				return (400, response);
 			}
 
-			foreach (int id in (request ?? throw new NullReferenceException()).Ids)
+			using var transaction = Task4Context.Instance.Database.BeginTransaction();
+			try
 			{
-				Task4Context.Instance.Users.Find(id)?.Status = request.Status;
+				await Task4Context.Instance.Users.Where((Db.User user) => request.Ids.Contains(user.Id)).ForEachAsync((Db.User user) =>
+				{
+					user.Status = request.Status;
+				});
+
+				Task4Context.Instance.SaveChanges();
+				transaction.Commit();
+			}
+			catch
+			{
+				transaction.Rollback();
+				throw;
 			}
 
-			Task4Context.Instance.SaveChanges();
-			httpContext.Response.StatusCode = 200;
-			return;
+			return (200, null);
 		}
 	}
 }

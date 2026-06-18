@@ -1,4 +1,6 @@
-﻿export async function signInButtonOnClick() {
+﻿import { isValidResponse } from "/js/functions.js";
+
+export async function signInButtonOnClick() {
     const email = document.getElementById("signInEmailInput").value.trim();
     const password = document.getElementById("signInPasswordInput").value.trim();
     if (email == null || email === "" || password == null || password === "") {
@@ -15,13 +17,8 @@
         })
     });
 
-    if (response.status === 200) {
+    if (await isValidResponse(response, 200))
         window.location.href = response.url;
-    }
-    else {
-        const error = await response.json();
-        alert(response.status + ": " + error);
-    }
 }
 
 export async function signUpButtonOnClick() {
@@ -33,7 +30,7 @@ export async function signUpButtonOnClick() {
         alert("Name, email and both passwords cannot be emty");
         return;
     }
-    
+
     const response = await fetch("api/signup", {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
@@ -44,15 +41,12 @@ export async function signUpButtonOnClick() {
             repeatPassword: repeatPassword
         })
     });
-    
-    if (response.status === 200) {
-        const href = await response.json();
-        const element = document.getElementById("signUpVerifyA");
-        element.href = href;
-        element.style.visibility = "visible";
-    }
-    else {
-        const error = await response.json();
-        alert(response.status + ": " + error);
-    }
+
+    if (!await isValidResponse(response, 200))
+        return;
+
+    const href = await response.json();
+    const element = document.getElementById("signUpVerifyA");
+    element.href = href;
+    element.style.visibility = "visible";
 }

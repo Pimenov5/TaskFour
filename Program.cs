@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Text;
 using TaskFour.Types;
@@ -7,7 +8,9 @@ namespace TaskFour
     public class Program
     {
         public static void Main(string[] args)
-        {
+		{
+			Console.WriteLine("DB connection string: " + Task4Context.Instance.Database.GetConnectionString() + Environment.NewLine);
+
 			var builder = WebApplication.CreateBuilder(args); 
             builder.Services.AddDistributedMemoryCache();
 			builder.Services.AddSession();
@@ -34,14 +37,27 @@ namespace TaskFour
             IEnumerable<Type> types = typeof(Program).Assembly.GetTypes().Where((Type type) => type.GetInterface(nameof(IApiRequest)) is not null);
             foreach (Type type in types)
             {
-                MethodInfo methodInfo = type.GetMethod(nameof(IApiRequest.RespondAsync)) ?? throw new NullReferenceException();
-                ApiRequestMethodAttribute attribute = methodInfo.GetCustomAttribute<ApiRequestMethodAttribute>() ?? throw new NullReferenceException();
+                ApiRequestAttribute attribute = type.GetCustomAttribute<ApiRequestAttribute>() ?? throw new NullReferenceException();
 
                 app.MapMethods($"/api/{type.Name.ToLower()}", [attribute.HttpMethod.ToUpper()], async(HttpContext httpContext) =>
 				{
 					ConstructorInfo constructorInfo = type.GetConstructor([]) ?? throw new NullReferenceException();
 					object apiRequestObject = constructorInfo.Invoke([]) ?? throw new NullReferenceException();
-					await ((IApiRequest)apiRequestObject).RespondAsync(httpContext);
+
+                    (int?, object?) response = (null, null);
+					try
+                    {
+						response = await ((IApiRequest)apiRequestObject).RespondAsync(httpContext);
+                    }
+                    catch (Exception ex)
+                    {
+                        response.Item1 = 500;
+                        response.Item2 = (ex.InnerException is Exception inner ? inner : ex).Message;
+                    }
+
+                    httpContext.Response.StatusCode = response.Item1 ?? httpContext.Response.StatusCode;
+                    if (response.Item2 is not null)
+                        await httpContext.Response.WriteAsJsonAsync(response.Item2);
 				});
             }
 

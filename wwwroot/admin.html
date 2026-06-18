@@ -37,6 +37,11 @@
 		<div class="col-md-7">
             <nav class="navbar navbar-default" role="navigation">
                 <button id="signOutButton" class="btn btn-sm btn-primary">Sign out</button>
+
+                <script type="module">
+                    import { signOutButtonOnClick } from "/js/admin.js";
+                    document.getElementById("signOutButton").addEventListener("click", signOutButtonOnClick);
+                </script>
             </nav>
 
 		    <div class="card">
@@ -48,15 +53,17 @@
                         <div class="col-md-4">
                             <button id="blockUsersButton" class="btn btn-sm btn-primary"><i class="fa fa-lock"></i> Block</button>
                             <button id="unblockUsersButton" class="btn btn-sm btn-primary"><i class="fa fa-unlock"></i></button>
-                            <button id="removeUsersButton" class="btn btn-sm btn-primary"><i class="fa fa-trash"></i></button>
+                            <button id="deleteUsersButton" class="btn btn-sm btn-primary"><i class="fa fa-trash"></i></button>
                             <button id="cleanUsersButton" class="btn btn-sm btn-primary"><i class="fa fa-user-times" aria-hidden="true"></i></button>
                         </div>
 
                         <script type="module">
-							import { blockUsersButtonOnClick, unblockUsersButtonOnClick } from "/js/admin.js";
+							import { blockUsersButtonOnClick, unblockUsersButtonOnClick, deleteUsersButtonOnClick, cleanUsersButtonOnClick } from "/js/admin.js";
 
 							document.getElementById("blockUsersButton").addEventListener("click", blockUsersButtonOnClick);
 							document.getElementById("unblockUsersButton").addEventListener("click", unblockUsersButtonOnClick);
+							document.getElementById("deleteUsersButton").addEventListener("click", deleteUsersButtonOnClick);
+							document.getElementById("cleanUsersButton").addEventListener("click", cleanUsersButtonOnClick);
                         </script>
 		                
 		            </div>

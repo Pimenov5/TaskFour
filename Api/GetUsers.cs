@@ -2,7 +2,8 @@
 
 namespace TaskFour.Api
 {
-	public class GetUsers : IApiRequest
+	[ApiRequest("GET")]
+	public class GetUsers : AdminApiRequest, IApiRequest
 	{
 		public class VisibleUser
 		{
@@ -18,8 +19,7 @@ namespace TaskFour.Api
 			public List<VisibleUser> Users { get; set; } = [];
 		}
 
-		[ApiRequestMethod("GET")]
-		public async Task RespondAsync(HttpContext httpContext)
+		protected override async Task<(int?, object?)> GetStatusCode(HttpContext httpContext)
 		{
 			List<Db.User> dbUsers = [..Task4Context.Instance.Users];
 			Response response = new();
@@ -42,9 +42,7 @@ namespace TaskFour.Api
 				});
 			}
 
-			httpContext.Response.StatusCode = 200;
-			await httpContext.Response.WriteAsJsonAsync(response);
-			return;
+			return (200, response);
 		}
 	}
 }

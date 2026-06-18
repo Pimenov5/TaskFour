@@ -1,7 +1,7 @@
 ﻿export async function resetUsersTable() {
     const response = await fetch("api/getusers", {
         method: "GET",
-        headers: { "Accept": "application/json" }
+        headers: { "Accept": "application/json", "Content-Type": "application/json" }
     });
 
     if (response.status !== 200) {
@@ -81,7 +81,25 @@ export async function unblockUsersButtonOnClick() {
     await setUsersStatus(1);
 }
 
-async function setUsersStatus(status) {
+export async function deleteUsersButtonOnClick() {
+    await deleteUsers(null);
+}
+
+export async function cleanUsersButtonOnClick() {
+    await deleteUsers(true);
+}
+
+export async function signOutButtonOnClick() {
+    const response = await fetch("api/signout", {
+        method: "POST",
+        headers: { "Accept": "application?json", "Content-Type": "application/json" }
+    });
+
+    if (await isValidResponse(response, 200))
+        window.location.href = response.url;
+}
+
+function getCheckedIds() {
     const ids = [];
     const count = document.getElementById("allUsersCheckbox").name;
     for (var i = 0; i < count; i++) {
@@ -89,6 +107,30 @@ async function setUsersStatus(status) {
         if (checkbox.checked)
             ids.push(checkbox.name);
     }
+
+    return ids;
+}
+
+import { isValidResponse } from "/js/functions.js";
+
+async function deleteUsers(onlyNotVerified) {
+    const ids = getCheckedIds();
+
+    const response = await fetch("api/deleteusers", {
+        method: "DELETE",
+        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({
+            onlyNotVerified: onlyNotVerified,
+            ids: ids
+        })
+    });
+
+    if (await isValidResponse(response, 200))
+        window.location.href = "/admin.html";
+}
+
+async function setUsersStatus(status) {
+    const ids = getCheckedIds();
 
     const response = await fetch("api/setusersstatus", {
         method: "PATCH",
@@ -99,11 +141,6 @@ async function setUsersStatus(status) {
         })
     });
 
-    if (response.status == 200) {
+    if (await isValidResponse(response, 200))
         window.location.href = "/admin.html";
-    }
-    else {
-        const error = await response.json();
-        alert(response.status + ": " + error);
-    }
 }
